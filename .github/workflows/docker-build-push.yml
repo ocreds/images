@@ -32,8 +32,7 @@ jobs:
 
           manual_json="[]"
           if [ -n "${{ github.event.inputs.images }}" ]; then
-            manual_json=$(echo "${{ github.event.inputs.images }}" | awk -F, '{for(i=1;i<=NF;i++) printf "\"%s/Dockerfile\"%s", $i, (i<NF?",":"")}' | sed 's/\//\\\//g')
-            manual_json="[${manual_json}]"
+            manual_json=$(echo "${{ github.event.inputs.images }}" | jq -R 'split(",") | map(. + "/Dockerfile")')
           fi
 
           if [ "$files" = "[]" ]; then
