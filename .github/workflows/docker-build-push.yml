@@ -30,13 +30,18 @@ jobs:
           git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep Dockerfile > dockerfiles.txt || true
           files=$(cat dockerfiles.txt | jq -R -s -c 'split("\n")[:-1]')
 
+          manual_json="[]"
           if [ -n "${{ github.event.inputs.images }}" ]; then
-            IFS=',' read -ra dirs <<< "${{ github.event.inputs.images }}"
-            for dir in "${dirs[@]}"; do
-              echo "$dir/Dockerfile" >> dockerfiles.txt
-            done
-            files=$(sort -u dockerfiles.txt | jq -R -s -c 'split("\n")[:-1]')
+            manual_json=$(echo "${{ github.event.inputs.images }}" | awk -F, '{for(i=1;i<=NF;i++) printf "\"%s/Dockerfile\"%s", $i, (i<NF?",":"")}' | sed 's/\//\\\//g')
+            manual_json="[${manual_json}]"
           fi
+
+          if [ "$files" = "[]" ]; then
+            files="$manual_json"
+          elif [ "$manual_json" != "[]" ]; then
+            files=$(echo "$files" "$manual_json" | jq -s 'add | unique')
+          fi
+
           echo "Final Dockerfiles: $files"
           echo "dockerfiles=$files" >> $GITHUB_OUTPUT
 
