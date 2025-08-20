@@ -47,7 +47,9 @@ jobs:
       - name: Set matrix
         id: set-matrix
         run: |
-          echo "dockerfiles=${{ steps.find.outputs.dockerfiles }}" >> $GITHUB_OUTPUT
+          files='${{ steps.find.outputs.dockerfiles }}'
+          objects=$(echo "$files" | jq -c 'map({dockerfile: .})')
+          echo "dockerfiles=$objects" >> $GITHUB_OUTPUT
 
   build-and-push:
     needs: find-changed-dockerfiles
@@ -55,7 +57,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ fromJson(needs.find-changed-dockerfiles.outputs.dockerfiles) }}
+        include: ${{ fromJson(needs.find-changed-dockerfiles.outputs.dockerfiles) }}
     permissions:
       contents: read
       packages: write
