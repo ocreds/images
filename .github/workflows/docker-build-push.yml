@@ -48,7 +48,8 @@ jobs:
         id: set-matrix
         run: |
           files='${{ steps.find.outputs.dockerfiles }}'
-          objects=$(echo "$files" | jq -c 'map({dockerfile: .})')
+          # each object has dockerfile and context (directory without the file name)
+          objects=$(echo "$files" | jq -c 'map({dockerfile: ., context: (split("/")[:-1] | join("/"))})')
           echo "dockerfiles=$objects" >> $GITHUB_OUTPUT
 
   build-and-push:
@@ -85,7 +86,7 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.dockerfile }}
+          context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
           platforms: linux/amd64,linux/arm64
@@ -98,7 +99,7 @@ jobs:
           REPO: ${{ github.repository }}
           WORKFLOW_ID: ${{ github.workflow }}
         run: |
-          parent_dir=$(dirname "${{ matrix.dockerfile }}")
+          parent_dir="${{ matrix.context }}"
           find "$parent_dir" -mindepth 2 -type f -name Dockerfile | while read dep_dockerfile; do
             dep_dir=$(dirname "$dep_dockerfile")
             dep_dir=${dep_dir#./}
