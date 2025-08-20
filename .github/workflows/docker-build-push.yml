@@ -50,7 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        dockerfile: ${{ fromJson(needs.find-dockerfiles.outputs.dockerfiles) }}
+        dockerfile: ${{ fromJson(needs.find-changed-dockerfiles.outputs.dockerfiles) }}
     permissions:
       contents: read
       packages: write
