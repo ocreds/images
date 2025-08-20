@@ -52,6 +52,7 @@ jobs:
 
   build-and-push:
     needs: find-changed-dockerfiles
+    if: ${{ needs.find-changed-dockerfiles.outputs.dockerfiles != '[]' }}
     runs-on: ubuntu-latest
     strategy:
       matrix:
