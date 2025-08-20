@@ -32,13 +32,13 @@ jobs:
 
           manual_json="[]"
           if [ -n "${{ github.event.inputs.images }}" ]; then
-            manual_json=$(echo "${{ github.event.inputs.images }}" | jq -R 'split(",") | map(. + "/Dockerfile")')
+            manual_json=$(echo "${{ github.event.inputs.images }}" | jq -Rc 'split(",") | map(. + "/Dockerfile")')
           fi
 
           if [ "$files" = "[]" ]; then
             files="$manual_json"
           elif [ "$manual_json" != "[]" ]; then
-            files=$(echo "$files" "$manual_json" | jq -s 'add | unique')
+            files=$(echo "$files" "$manual_json" | jq -sc 'add | unique')
           fi
 
           echo "Final Dockerfiles: $files"
