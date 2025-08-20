@@ -1,0 +1,110 @@
+name: Build and Push Docker Images
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      images:
+        description: 'Comma-separated list of image directories to build (e.g. ubuntu/24.04/systemd)'
+        required: false
+        default: ''
+
+jobs:
+  find-changed-dockerfiles:
+    runs-on: ubuntu-latest
+    outputs:
+      dockerfiles: ${{ steps.set-matrix.outputs.dockerfiles }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get changed Dockerfiles and manual images
+        id: find
+        run: |
+          git fetch origin ${{ github.event.before }}
+          git fetch origin ${{ github.sha }}
+          git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep Dockerfile > dockerfiles.txt || true
+          files=$(cat dockerfiles.txt | jq -R -s -c 'split("\n")[:-1]')
+
+          if [ -n "${{ github.event.inputs.images }}" ]; then
+            IFS=',' read -ra dirs <<< "${{ github.event.inputs.images }}"
+            for dir in "${dirs[@]}"; do
+              echo "$dir/Dockerfile" >> dockerfiles.txt
+            done
+            files=$(sort -u dockerfiles.txt | jq -R -s -c 'split("\n")[:-1]')
+          fi
+          echo "Final Dockerfiles: $files"
+          echo "dockerfiles=$files" >> $GITHUB_OUTPUT
+
+      - name: Set matrix
+        id: set-matrix
+        run: |
+          echo "dockerfiles=${{ steps.find.outputs.dockerfiles }}" >> $GITHUB_OUTPUT
+
+  build-and-push:
+    needs: find-changed-dockerfiles
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        dockerfile: ${{ fromJson(needs.find-dockerfiles.outputs.dockerfiles) }}
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get image tag
+        id: tag
+        run: |
+          path="${{ matrix.dockerfile }}"
+          tag=$(dirname "$path" | sed 's|^./||' | tr '/' '-')
+          echo "tag=$tag" >> $GITHUB_OUTPUT
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ${{ matrix.dockerfile }}
+          file: ${{ matrix.dockerfile }}
+          push: true
+          platforms: linux/amd64,linux/arm64
+          tags: ghcr.io/ocreds/images:${{ steps.tag.outputs.tag }}
+
+      - name: Find and trigger rebuild of dependent images
+        if: always()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          WORKFLOW_ID: ${{ github.workflow }}
+        run: |
+          parent_dir=$(dirname "${{ matrix.dockerfile }}")
+          find "$parent_dir" -mindepth 2 -type f -name Dockerfile | while read dep_dockerfile; do
+            dep_dir=$(dirname "$dep_dockerfile")
+            dep_dir=${dep_dir#./}
+            dep_images+=("$dep_dir")
+          done
+          if [ "${#dep_images[@]}" -gt 0 ]; then
+            images=$(IFS=','; echo "${dep_images[*]}")
+            echo "Triggering rebuild for dependent images: $images"
+            curl -X POST \
+              -H "Accept: application/vnd.github+json" \
+              -H "Authorization: Bearer $GITHUB_TOKEN" \
+              "https://api.github.com/repos/$REPO/actions/workflows/$WORKFLOW_ID/dispatches" \
+              -d "{\"ref\":\"${GITHUB_REF_NAME}\",\"inputs\":{\"manual_images\":\"$images\"}}"
+          else
+            echo "No dependent images found."
+          fi
