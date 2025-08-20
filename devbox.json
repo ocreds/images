@@ -1,0 +1,10 @@
+{
+  "packages": [
+    "bashInteractive",
+    "bash-completion",
+    "trunk-io@latest"
+  ],
+  "shell": {
+    "init_hook": "./init.sh"
+  }
+}

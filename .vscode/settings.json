@@ -1,0 +1,18 @@
+{
+  "terminal.integrated.profiles.linux": {
+    "bash": {
+      "path": "bash",
+      "args": ["-c", "exec bash"]
+    }
+  },
+  "terminal.integrated.defaultProfile.linux": "bash",
+  "editor.formatOnSave": false,
+  "emeraldwalk.runonsave": {
+    "commands": [
+      {
+        "match": ".*",
+        "cmd": "devbox run -- bash -lc 'trunk fmt \"${file}\"'"
+      }
+    ]
+  }
+}
