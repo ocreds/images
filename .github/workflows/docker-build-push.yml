@@ -102,7 +102,7 @@ jobs:
           parent_dir="${{ matrix.context }}"
           dep_images=()
           while IFS= read -r -d $'\0' dep_dir; do
-            dep_dir=$(dirname "$dep_dockerfile")
+            dep_dir=$(dirname "$dep_dir")
             dep_dir=${dep_dir#./}
             dep_images+=("$dep_dir")
           done < <(find "$parent_dir" -mindepth 2 -type f -name Dockerfile -print0)
