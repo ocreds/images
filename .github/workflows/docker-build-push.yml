@@ -95,7 +95,7 @@ jobs:
       - name: Find and trigger rebuild of dependent images
         if: always()
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.DISPATCH_WORKFLOW_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           parent_dir="${{ matrix.context }}"
