@@ -97,7 +97,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          WORKFLOW_ID: ${{ github.workflow }}
         run: |
           parent_dir="${{ matrix.context }}"
           dep_images=()
@@ -112,7 +111,7 @@ jobs:
             curl -X POST \
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
-              "https://api.github.com/repos/$REPO/actions/workflows/$WORKFLOW_ID/dispatches" \
+              "https://api.github.com/repos/$REPO/actions/workflows/docker-build-push.yml/dispatches" \
               -d "{\"ref\":\"${GITHUB_REF_NAME}\",\"inputs\":{\"manual_images\":\"$images\"}}"
           else
             echo "No dependent images found."
