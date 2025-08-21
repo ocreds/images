@@ -112,7 +112,7 @@ jobs:
               -H "Accept: application/vnd.github+json" \
               -H "Authorization: Bearer $GITHUB_TOKEN" \
               "https://api.github.com/repos/$REPO/actions/workflows/docker-build-push.yml/dispatches" \
-              -d "{\"ref\":\"${GITHUB_REF_NAME}\",\"inputs\":{\"manual_images\":\"$images\"}}"
+              -d "{\"ref\":\"${GITHUB_REF_NAME}\",\"inputs\":{\"images\":\"$images\"}}"
           else
             echo "No dependent images found."
           fi
