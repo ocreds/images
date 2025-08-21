@@ -100,11 +100,12 @@ jobs:
           WORKFLOW_ID: ${{ github.workflow }}
         run: |
           parent_dir="${{ matrix.context }}"
-          find "$parent_dir" -mindepth 2 -type f -name Dockerfile | while read dep_dockerfile; do
+          dep_images=()
+          while IFS= read -r -d $'\0' dep_dir; do
             dep_dir=$(dirname "$dep_dockerfile")
             dep_dir=${dep_dir#./}
             dep_images+=("$dep_dir")
-          done
+          done < <(find "$parent_dir" -mindepth 2 -type f -name Dockerfile -print0)
           if [ "${#dep_images[@]}" -gt 0 ]; then
             images=$(IFS=','; echo "${dep_images[*]}")
             echo "Triggering rebuild for dependent images: $images"
